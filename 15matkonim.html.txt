@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIVERO - ספר המתכונים השלם</title>
+    <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- משתנים ועיצוב נקי --- */
+        :root {
+            --book-width: 480px;  /* רחב יותר לקריאה נוחה */
+            --book-height: 700px;
+            --bg-color: #eef2f3;
+            --paper: #ffffff;
+            --text: #2c3e50;
+            --accent: #d35400;
+            --anim-speed: 0.6s;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Heebo', sans-serif;
+            background-color: var(--bg-color);
+            height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+            color: var(--text);
+        }
+
+        /* --- מסך כניסה --- */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.98);
+            z-index: 10000;
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 0.5s;
+        }
+        .login-box { text-align: center; width: 320px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); background: white; border: 1px solid #eee; }
+        .login-title { font-family: 'Rubik'; font-weight: 900; font-size: 3em; color: var(--accent); margin-bottom: 5px; letter-spacing: 2px; }
+        .login-input { width: 100%; padding: 15px; margin: 20px 0; border: 1px solid #ddd; border-radius: 50px; text-align: center; font-size: 1.1em; transition: 0.3s; }
+        .login-input:focus { border-color: var(--accent); }
+        .login-btn { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .login-btn:hover { background: #e67e22; transform: translateY(-2px); }
+
+        /* --- ספר (Flipbook) --- */
+        .scene {
+            width: var(--book-width); height: var(--book-height);
+            position: relative; perspective: 2000px;
+            margin: 0 auto;
+        }
+
+        .page {
+            width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0;
+            background: var(--paper);
+            border-radius: 5px 15px 15px 5px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transform-origin: center bottom;
+            transition: transform var(--anim-speed) ease, opacity var(--anim-speed) ease;
+            display: flex; flex-direction: column;
+            overflow: hidden; border: 1px solid #eee;
+        }
+
+        .page.flipped {
+            transform: translateX(-120%) rotate(-5deg);
+            opacity: 0; pointer-events: none;
+        }
+
+        /* תוכן העמוד */
+        .page-content {
+            padding: 40px 50px;
+            height: 100%;
+            display: flex; flex-direction: column;
+            overflow-y: auto; scrollbar-width: thin;
+        }
+        .page-content::-webkit-scrollbar { width: 4px; }
+        .page-content::-webkit-scrollbar-thumb { background-color: #ddd; border-radius: 4px; }
+
+        /* עיצוב מתכון */
+        .recipe-header { border-bottom: 3px double var(--accent); padding-bottom: 20px; margin-bottom: 30px; text-align: center; }
+        .recipe-title { font-family: 'Frank Ruhl Libre', serif; font-size: 2.2em; color: var(--text); margin: 0; font-weight: 700; line-height: 1.1; }
+        .recipe-meta { font-size: 0.9em; color: #888; margin-top: 10px; display:flex; justify-content:center; gap: 20px; font-family: 'Rubik', sans-serif; }
+
+        .section-title { 
+            font-weight: 700; color: var(--accent); margin: 25px 0 15px 0; font-size: 1.2em; 
+            text-transform: uppercase; letter-spacing: 1px; border-bottom:1px dashed #ddd; padding-bottom:5px;
+        }
+        
+        ul.ingredients { list-style: none; padding: 0; margin: 0; font-size: 1.1em; line-height: 1.8; }
+        ul.ingredients li { padding-right: 20px; position: relative; margin-bottom: 6px; }
+        ul.ingredients li::before { content: '•'; color: var(--accent); position: absolute; right: 0; font-weight: bold; }
+
+        ol.instructions { padding-right: 20px; margin: 0; font-size: 1.1em; line-height: 1.8; color: #444; }
+        ol.instructions li { margin-bottom: 12px; }
+
+        /* טבלת ערכים תזונתיים */
+        .nutrition-box {
+            display: flex; justify-content: space-around;
+            background: #fdfbf7; border: 1px solid #eee;
+            border-radius: 8px; padding: 15px; margin-bottom: 30px;
+        }
+        .nut-item { text-align: center; font-size: 0.9em; color: #666; font-family: 'Rubik', sans-serif; }
+        .nut-val { display: block; font-size: 1.2em; font-weight: bold; color: var(--accent); }
+
+        .page-num { margin-top: auto; text-align: center; font-size: 0.8em; color: #bbb; padding-top: 20px; border-top: 1px solid #f9f9f9; }
+
+        /* כפתור שף */
+        .ai-help-btn {
+            background: white; border: 1px solid var(--accent); color: var(--accent);
+            padding: 12px; border-radius: 50px; font-size: 1em; font-weight: bold;
+            cursor: pointer; margin-top: 30px; width: 100%; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .ai-help-btn:hover { background: var(--accent); color: white; }
+
+        /* עמוד שער */
+        .cover-content { 
+            text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            border: 6px double var(--accent); margin: 20px; padding: 20px;
+        }
+
+        /* בקרים */
+        .controls { position: absolute; bottom: -80px; width: 100%; display: flex; justify-content: center; gap: 40px; }
+        .nav-btn { 
+            background: white; color: var(--text); border: none; width: 60px; height: 60px; 
+            border-radius: 50%; box-shadow: 0 5px 20px rgba(0,0,0,0.1); cursor: pointer; 
+            font-size: 1.4em; transition: 0.2s; display: flex; align-items: center; justify-content: center; 
+        }
+        .nav-btn:hover { transform: scale(1.1); color: var(--accent); }
+        .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* צ'אט */
+        .chat-widget { position: fixed; bottom: 30px; left: 30px; z-index: 5000; }
+        .chat-fab { width: 65px; height: 65px; background: var(--accent); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-size: 1.8em; cursor: pointer; box-shadow: 0 5px 25px rgba(0,0,0,0.2); transition: 0.3s; border: 3px solid white; }
+        .chat-window { position: absolute; bottom: 80px; left: 0; width: 340px; height: 500px; background: white; border-radius: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; border: 1px solid #eee; }
+        .chat-header { background: var(--accent); padding: 15px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #fafafa; display:flex; flex-direction:column; gap:10px; }
+        .msg { padding: 10px 15px; border-radius: 12px; max-width: 85%; font-size: 0.9em; line-height: 1.4; }
+        .msg.bot { background: white; align-self: flex-start; border: 1px solid #ddd; }
+        .msg.user { background: var(--accent); color: white; align-self: flex-end; }
+        .chat-footer { padding: 10px; background: white; border-top: 1px solid #eee; display: flex; gap: 5px; }
+        .chat-input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #eee; background: #f9f9f9; }
+        .chat-send { background: var(--accent); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display:flex; align-items:center; justify-content:center;}
+        
+        @media (max-width: 600px) { :root { --book-width: 90vw; --book-height: 85vh; } .controls { bottom: -60px; } }
+    </style>
+</head>
+<body>
+
+    <!-- לוגין -->
+    <div id="login-screen">
+        <div class="login-box">
+            <div class="login-title">NIVERO</div>
+            <div style="margin-bottom:30px; color:#888;">ספר המתכונים הדיגיטלי</div>
+            <input type="password" id="passInput" class="login-input" placeholder="הכנס סיסמא">
+            <button class="login-btn" onclick="checkLogin()">התחל לבשל</button>
+            <div id="errorMsg" style="color:red; display:none; margin-top:15px; font-size:0.9em;">סיסמא שגויה</div>
+        </div>
+    </div>
+
+    <!-- הספר -->
+    <div class="scene">
+        <div class="book" id="book">
+            <!-- הדפים יווצרו כאן -->
+        </div>
+
+        <div class="controls">
+            <button class="nav-btn" id="prevBtn" onclick="prevPage()"><i class="fas fa-arrow-right"></i></button>
+            <button class="nav-btn" id="nextBtn" onclick="nextPage()"><i class="fas fa-arrow-left"></i></button>
+        </div>
+    </div>
+
+    <!-- צ'אט -->
+    <div class="chat-widget">
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-header">
+                <span>שף נירו 👨‍🍳</span>
+                <i class="fas fa-times" style="cursor:pointer;" onclick="toggleChat()"></i>
+            </div>
+            <div class="chat-body" id="chatBody">
+                <div class="msg bot">שלום! אני כאן לעזור עם שאלות על בישול בנירוסטה.</div>
+            </div>
+            <div class="chat-footer">
+                <input type="text" id="chatInput" class="chat-input" placeholder="שאל שאלה..." onkeypress="handleEnter(event)">
+                <button class="chat-send" onclick="sendMsg()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+        <div class="chat-fab" onclick="toggleChat()"><i class="fas fa-comment-dots"></i></div>
+    </div>
+
+    <script>
+        const apiKey = ""; // API Key Injected
+        let currentPage = 0;
+        let pages = [];
+        let context = "";
+
+        // נתונים מפורטים - כולל ערכים תזונתיים
+        const recipes = [
+            {
+                title: "סטייק כרובית צרוב",
+                nut: { cal: 130, pro: "4", carb: "9", fat: "8" },
+                meta: "15 דקות | קל | טבעוני",
+                ings: ["1 ראש כרובית בינוני", "4 כפות שמן זית", "1 כפית מלח גס", "1/2 כפית פלפל שחור", "1/2 כוס מים רותחים"],
+                inst: ["חותכים את הכרובית לפרוסות עבות.", "מחממים מחבת נירוסטה 2 דקות.", "מוסיפים שמן ומניחים את הסטייקים. <strong>תיבול ראשוני:</strong> בוזקים חצי מהמלח והפלפל. לא מזיזים 5 דקות!", "הופכים. <strong>תיבול שני:</strong> מפזרים את שאר התבלינים.", "מוסיפים מים, סוגרים מכסה ומבשלים 5 דקות ריכוך."]
+            },
+            {
+                title: "קציצות עדשים זהובות",
+                nut: { cal: 150, pro: "8", carb: "18", fat: "5" },
+                meta: "30 דקות | בינוני | צמחוני",
+                ings: ["1.5 כוסות עדשים כתומות מבושלות (יבשות)", "1 גזר מגורר דק וסחוט", "1 בצל קצוץ דק", "1 ביצה", "1/2 כוס פירורי לחם", "כפית מלח, כמון, כורכום"],
+                inst: ["<strong>תיבול העיסה:</strong> מערבבים עדשים, ירקות וביצה עם המלח והכמון.", "מוסיפים פירורים לעיסה יציבה.", "מחממים מחבת ושמן.", "מטגנים 3 דקות מכל צד עד להזהבה."]
+            },
+            {
+                title: "שקשוקה ירוקה",
+                nut: { cal: 220, pro: "14", carb: "6", fat: "16" },
+                meta: "20 דקות | קל | חלבי",
+                ings: ["400 גרם תרד", "1 בצל קצוץ", "250 מ\"ל שמנת", "4 ביצים", "מלח, פלפל, מוסקט"],
+                inst: ["מטגנים בצל. מוסיפים תרד ומאדים.", "מוסיפים שמנת. <strong>תיבול:</strong> מלח, פלפל ומוסקט.", "שוברים ביצים.", "מכסים ומבשלים 6 דקות."]
+            },
+            {
+                title: "בטטה מקורמלת",
+                nut: { cal: 190, pro: "2", carb: "30", fat: "7" },
+                meta: "25 דקות | קל | טבעוני",
+                ings: ["2 בטטות קוביות", "3 כפות שמן זית", "מלח גס", "רוזמרין טרי"],
+                inst: ["מחממים מחבת ושמן.", "צורבים בטטה 4 דקות לקראסט.", "הופכים ומטגנים לריכוך.", "<strong>תיבול:</strong> מוסיפים רוזמרין ומלח בסוף."]
+            },
+            {
+                title: "לביבות קישואים",
+                nut: { cal: 90, pro: "4", carb: "8", fat: "5" },
+                meta: "30 דקות | בינוני | צמחוני",
+                ings: ["4 קישואים מגוררים", "2 ביצים", "3 כפות קמח", "בצל ירוק", "מלח, פלפל"],
+                inst: ["ממליחים קישואים וסוחטים היטב.", "מערבבים עם שאר החומרים והפלפל.", "מטגנים תלוליות בשמן חם עד הזהבה."]
+            },
+            {
+                title: "מרק עגבניות ואורז",
+                nut: { cal: 180, pro: "4", carb: "30", fat: "5" },
+                meta: "40 דקות | קל | טבעוני",
+                ings: ["בצל קצוץ", "קופסת עגבניות מרוסקות", "1/2 כוס אורז", "4 כוסות מים", "פפריקה, סוכר, מלח"],
+                inst: ["מטגנים בצל. מוסיפים עגבניות ומים.", "<strong>תיבול:</strong> פפריקה, סוכר ומלח.", "מוסיפים אורז, מכסים ומבשלים 20 דקות."]
+            },
+            {
+                title: "סטייק חציל בטחינה",
+                nut: { cal: 140, pro: "4", carb: "10", fat: "10" },
+                meta: "20 דקות | קל | טבעוני",
+                ings: ["1 חציל פרוס", "שמן זית", "טחינה גולמית", "סילאן", "מלח גס"],
+                inst: ["בוזקים מלח על החציל, משהים ומנגבים.", "צורבים במחבת יבשה לייבוש.", "מוסיפים שמן ומטגנים לריכוך.", "מגישים עם טחינה וסילאן."]
+            },
+            {
+                title: "פנקייק שיבולת שועל",
+                nut: { cal: 180, pro: "6", carb: "25", fat: "5" },
+                meta: "15 דקות | קל | צמחוני",
+                ings: ["כוס קמח ש\"ש", "כוס חלב", "ביצה", "כפית אבקת אפייה", "כף סוכר, מלח"],
+                inst: ["מערבבים הכל לבלילה.", "מחממים מחבת משומנת.", "יוצקים ומטגנים עד בועות, הופכים."]
+            },
+            {
+                title: "פסטה סיר אחד",
+                nut: { cal: 350, pro: "12", carb: "60", fat: "8" },
+                meta: "15 דקות | קל | טבעוני",
+                ings: ["250 גרם פסטה", "15 שרי", "2 כפות רסק", "3 כוסות מים", "אורגנו, מלח"],
+                inst: ["שמים הכל במחבת.", "<strong>תיבול:</strong> מוסיפים אורגנו ומלח למים.", "מרתיחים ומבשלים 12 דקות תוך ערבוב."]
+            },
+            {
+                title: "סלט קינואה חם",
+                nut: { cal: 230, pro: "8", carb: "35", fat: "7" },
+                meta: "20 דקות | קל | טבעוני",
+                ings: ["כוס קינואה", "בצל סגול", "חמוציות, שקדים", "לימון, שמן זית, מלח"],
+                inst: ["קולים קינואה, מוסיפים מים ומבשלים.", "<strong>תיבול סופי:</strong> מערבבים עם תוספות, לימון, שמן ומלח."]
+            },
+            {
+                title: "קציצות טונה ברוטב",
+                nut: { cal: 160, pro: "20", carb: "5", fat: "6" },
+                meta: "25 דקות | קל | דגים",
+                ings: ["2 טונה", "ביצה, פירורים", "רוטב: עגבניות, שום", "פפריקה, כמון, מלח"],
+                inst: ["מערבבים טונה וביצה לקציצות.", "מרתיחים עגבניות.", "<strong>תיבול רוטב:</strong> פפריקה וכמון.", "מבשלים קציצות ברוטב 15 דקות."]
+            },
+            {
+                title: "פילאף אורז חגיגי",
+                nut: { cal: 240, pro: "5", carb: "45", fat: "5" },
+                meta: "25 דקות | קל | טבעוני",
+                ings: ["כוס אורז", "גזר, בצל, אפונה", "כפית כורכום", "מלח, פלפל"],
+                inst: ["מטגנים ירקות.", "מוסיפים אורז.", "<strong>תיבול:</strong> כורכום ומלח בשמן.", "מוסיפים מים ומבשלים 18 דקות."]
+            },
+            {
+                title: "טורטייה מהירה",
+                nut: { cal: 140, pro: "3", carb: "28", fat: "2" },
+                meta: "20 דקות | קל | טבעוני",
+                ings: ["2 כוסות קמח", "3/4 כוס מים רותחים", "2 כפות שמן", "1/2 כפית מלח"],
+                inst: ["מערבבים קמח ומלח.", "מוסיפים מים ושמן ולשים.", "מרדדים דק וקולים על מחבת יבשה."]
+            },
+            {
+                title: "חומוס מוקפץ",
+                nut: { cal: 180, pro: "8", carb: "20", fat: "7" },
+                meta: "10 דקות | קל | טבעוני",
+                ings: ["קופסת חומוס מסונן", "כף שמן", "פפריקה, כמון, מלח"],
+                inst: ["מקפיצים חומוס בשמן לוהט לחריכה.", "מסירים מהאש.", "<strong>תיבול חם:</strong> בוזקים תבלינים מיד."]
+            },
+            {
+                title: "תפוחים מקורמלים",
+                nut: { cal: 150, pro: "0", carb: "30", fat: "3" },
+                meta: "10 דקות | קל | מתוק",
+                ings: ["3 תפוחים חתוכים", "כף סוכר חום", "1/2 כפית קינמון", "שמן"],
+                inst: ["מטגנים תפוחים לריכוך.", "<strong>תיבול:</strong> מפזרים סוכר וקינמון.", "ממשיכים לטגן לקרמול."]
+            }
+        ];
+
+        function initBook() {
+            const book = document.getElementById('book');
+            let html = '';
+
+            // עמוד שער נקי
+            html += `
+                <div class="page" id="page0" style="z-index: 100;">
+                    <div class="cover-content">
+                        <h1 style="color:var(--accent); font-size:4em; margin-bottom:10px;">NIVERO</h1>
+                        <h2 style="color:#555; font-weight:300; font-size:2em;">ספר המתכונים השלם</h2>
+                        <div style="width:80px; height:4px; background:var(--accent); margin:40px 0;"></div>
+                        <p style="font-size:1.4em; line-height:1.6; color:#777;">
+                            15 מתכונים בריאים<br>
+                            במחבתות נירוסטה<br>
+                            עם הוראות תיבול מדויקות
+                        </p>
+                        <div style="margin-top:60px; font-size:1em; color:#bbb;">
+                            לחצו על החץ השמאלי כדי להתחיל
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // יצירת עמודי המתכונים
+            recipes.forEach((rec, idx) => {
+                const zIndex = 99 - idx;
+                html += `
+                    <div class="page" id="page${idx+1}" style="z-index: ${zIndex};">
+                        <div class="page-content">
+                            <div class="recipe-header">
+                                <h2 class="recipe-title">${rec.title}</h2>
+                                <div class="recipe-meta">${rec.meta}</div>
+                            </div>
+                            
+                            <div class="nutrition-box">
+                                <div class="nut-item"><span class="nut-val">${rec.nut.cal}</span> קל'</div>
+                                <div class="nut-item"><span class="nut-val">${rec.nut.pro}ג'</span> חלבון</div>
+                                <div class="nut-item"><span class="nut-val">${rec.nut.carb}ג'</span> פחמימה</div>
+                                <div class="nut-item"><span class="nut-val">${rec.nut.fat}ג'</span> שומן</div>
+                            </div>
+
+                            <div class="section-title">מצרכים</div>
+                            <ul class="ingredients">
+                                ${rec.ings.map(x => `<li>${x}</li>`).join('')}
+                            </ul>
+                            <div class="section-title">הוראות הכנה ותיבול</div>
+                            <ol class="instructions">
+                                ${rec.inst.map(x => `<li>${x}</li>`).join('')}
+                            </ol>
+                            <button class="ai-help-btn" onclick="askChef('${rec.title}')">
+                                <i class="fas fa-magic"></i> יש לך שאלה? שאל את השף
+                            </button>
+                            <div class="page-num">${idx+1}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            book.innerHTML = html;
+            pages = document.querySelectorAll('.page');
+            updateButtons();
+        }
+
+        // --- לוגיקה ---
+        function checkLogin() {
+            if(document.getElementById('passInput').value === '1234') {
+                document.getElementById('login-screen').style.opacity = 0;
+                setTimeout(() => document.getElementById('login-screen').style.display = 'none', 500);
+            } else {
+                document.getElementById('errorMsg').style.display = 'block';
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < pages.length - 1) {
+                pages[currentPage].classList.add('flipped');
+                currentPage++;
+                updateButtons();
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                pages[currentPage].classList.remove('flipped');
+                updateButtons();
+            }
+        }
+
+        function updateButtons() {
+            const nextBtn = document.getElementById('nextBtn');
+            const prevBtn = document.getElementById('prevBtn');
+
+            if (currentPage >= pages.length - 1) {
+                nextBtn.disabled = true;
+                nextBtn.style.opacity = "0.5";
+            } else {
+                nextBtn.disabled = false;
+                nextBtn.style.opacity = "1";
+            }
+
+            if (currentPage <= 0) {
+                prevBtn.disabled = true;
+                prevBtn.style.opacity = "0.5";
+            } else {
+                prevBtn.disabled = false;
+                prevBtn.style.opacity = "1";
+            }
+        }
+
+        function toggleChat() {
+            const w = document.getElementById('chatWindow');
+            w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function askChef(recipe) {
+            toggleChat();
+            context = `המתכון: ${recipe}.`;
+            addMsg('bot', `היי! אני כאן לעזור עם ה<strong>${recipe}</strong>. מה תרצה לדעת?`);
+        }
+
+        function addMsg(cls, txt) {
+            const div = document.createElement('div');
+            div.className = `msg ${cls}`;
+            div.innerHTML = txt;
+            const body = document.getElementById('chatBody');
+            body.appendChild(div);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        async function sendMsg() {
+            const inp = document.getElementById('chatInput');
+            const txt = inp.value.trim();
+            if(!txt) return;
+            addMsg('user', txt);
+            inp.value = '';
+            
+            try {
+                let p = "אתה שף נירו. ענה בקצרה בעברית.";
+                if(context) p += ` הקשר: ${context}`;
+                
+                const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ contents:[{parts:[{text:txt}]}], systemInstruction:{parts:[{text:p}]} })
+                });
+                const d = await r.json();
+                addMsg('bot', d.candidates[0].content.parts[0].text);
+            } catch { addMsg('bot', 'שגיאה בתקשורת.'); }
+        }
+
+        function handleEnter(e) { if(e.key==='Enter') sendMsg(); }
+
+        initBook();
+    </script>
+</body>
+</html>
